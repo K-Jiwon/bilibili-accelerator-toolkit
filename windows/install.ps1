@@ -65,6 +65,8 @@ $Port = 9223
 if ($Existing -and $Existing.port) { $Port = [int]$Existing.port }
 $Match = "bilipc.bilibili.com"
 if ($Existing -and $Existing.match) { $Match = $Existing.match }
+$UiMode = "lite"
+if ($Existing -and $Existing.uiMode) { $UiMode = $Existing.uiMode }
 
 if (-not $Exe) {
     $Exe = Find-BiliClient
@@ -85,39 +87,44 @@ $config = [ordered]@{
     clientExe = $Exe
     port = $Port
     match = $Match
+    uiMode = $UiMode
 }
 $config | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
 
 $shell = New-Object -ComObject WScript.Shell
 $icon = Join-Path $Dest "bilibili.ico"
+$pythonw = Join-Path $Dest "python\pythonw.exe"
+$launcherPy = Join-Path $Dest "launcher.py"
 $launchPs1 = Join-Path $Dest "launch.ps1"
-$startPs1 = Join-Path $Dest "start-injector.ps1"
 $diagnosePs1 = Join-Path $Dest "diagnose.ps1"
 
-# Shortcuts call PowerShell directly (no Windows Script Host / .vbs, which is
-# disabled on many managed machines).
-function New-Shortcut([string]$Path, [string]$Arguments, [string]$Description) {
+# Normal shortcuts go straight to the bundled pythonw.exe: no PowerShell, no
+# .vbs, no console window at all. The diagnostic shortcut keeps a visible
+# console because it prints the report.
+$usePythonw = Test-Path $pythonw
+$launcherTarget = if ($usePythonw) { $pythonw } else { "powershell.exe" }
+$launcherArgs = if ($usePythonw) { "`"$launcherPy`"" } else { "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchPs1`"" }
+$injectorArgs = if ($usePythonw) { "`"$launcherPy`" --inject-only" } else { "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchPs1`" --inject-only" }
+
+function New-Shortcut([string]$Path, [string]$TargetPath, [string]$Arguments, [string]$Description, [int]$WindowStyle = 7) {
     $lnk = $shell.CreateShortcut($Path)
-    $lnk.TargetPath = "powershell.exe"
+    $lnk.TargetPath = $TargetPath
     $lnk.Arguments = $Arguments
     $lnk.WorkingDirectory = $Dest
     if (Test-Path $icon) { $lnk.IconLocation = $icon }
     $lnk.Description = $Description
+    $lnk.WindowStyle = $WindowStyle
     $lnk.Save()
 }
-
-$launchArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchPs1`""
-$startArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$startPs1`""
-$diagnoseArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$diagnosePs1`""
 
 $desktop = [Environment]::GetFolderPath("Desktop")
 $startMenu = [Environment]::GetFolderPath("Programs")
 $startup = [Environment]::GetFolderPath("Startup")
 
-New-Shortcut (Join-Path $desktop "哔哩哔哩 加速.lnk") $launchArgs "哔哩哔哩 加速（用这个启动客户端）"
-New-Shortcut (Join-Path $startMenu "哔哩哔哩 加速.lnk") $launchArgs "哔哩哔哩 加速（用这个启动客户端）"
-New-Shortcut (Join-Path $desktop "哔哩哔哩 加速 诊断.lnk") $diagnoseArgs "收集诊断信息"
-New-Shortcut (Join-Path $startup "BiliAccelerator Injector.lnk") $startArgs "开机自动启动注入器"
+New-Shortcut (Join-Path $desktop "哔哩哔哩 加速.lnk") $launcherTarget $launcherArgs "哔哩哔哩 加速（用这个启动客户端）"
+New-Shortcut (Join-Path $startMenu "哔哩哔哩 加速.lnk") $launcherTarget $launcherArgs "哔哩哔哩 加速（用这个启动客户端）"
+New-Shortcut (Join-Path $desktop "哔哩哔哩 加速 诊断.lnk") "powershell.exe" "-NoProfile -ExecutionPolicy Bypass -File `"$diagnosePs1`"" "收集诊断信息" 1
+New-Shortcut (Join-Path $startup "BiliAccelerator Injector.lnk") $launcherTarget $injectorArgs "开机自动启动注入器"
 
 Write-Host ""
 Write-Host "==================== 安装完成 ====================" -ForegroundColor Green
@@ -128,6 +135,7 @@ Write-Host "  2. 哔哩哔哩 加速 诊断      ← 出问题时双击它，生
 Write-Host ""
 Write-Host "还创建了：开始菜单快捷方式 + 开机自动启动注入器"
 Write-Host "客户端路径：$Exe"
+Write-Host "面板模式：$UiMode    （lite = 去掉模糊特效、更省性能；可在 config.json 改成 full / off）"
 Write-Host ""
 Write-Host "下一步（照做就行）：" -ForegroundColor Yellow
 Write-Host "  1) 双击桌面的「哔哩哔哩 加速」（首次会自动重启一次客户端）"

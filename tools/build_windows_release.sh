@@ -50,7 +50,7 @@ echo "==> assembling bundle"
 cp "$REPO_ROOT/injector.py" "$BUNDLE/injector.py"
 cp "$REPO_ROOT/wsclient.py" "$BUNDLE/wsclient.py"
 cp "$REPO_ROOT/userscript/bilibili-accelerator.user.js" "$BUNDLE/bilibili-accelerator.user.js"
-cp "$REPO_ROOT/windows/"* "$BUNDLE/"
+find "$REPO_ROOT/windows" -maxdepth 1 -type f -exec cp {} "$BUNDLE/" \;
 rm -f "$BUNDLE/config.json"
 cp "$REPO_ROOT/assets/icon.ico" "$BUNDLE/bilibili.ico"
 

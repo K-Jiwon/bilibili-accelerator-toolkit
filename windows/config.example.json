@@ -1,5 +1,6 @@
 {
   "clientExe": "",
   "port": 9223,
-  "match": "bilipc.bilibili.com"
+  "match": "bilipc.bilibili.com",
+  "uiMode": "lite"
 }

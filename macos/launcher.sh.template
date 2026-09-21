@@ -15,6 +15,7 @@ mkdir -p "$DIR"
 
 if ! pgrep -f "$INJ" >/dev/null 2>&1; then
   nohup "$PY" "$INJ" --port "$PORT" --script "$SCRIPT" --logfile "$LOG" \
+    --ui-mode "__UI_MODE__" \
     >> "$DIR/injector.stdout.log" 2>&1 &
 fi
 

@@ -42,13 +42,18 @@
 {
   "clientExe": "C:\\Users\\你的用户名\\AppData\\Local\\Programs\\bilibili\\哔哩哔哩.exe",
   "port": 9223,
-  "match": "bilipc.bilibili.com"
+  "match": "bilipc.bilibili.com",
+  "uiMode": "lite"
 }
 ```
 
 - `clientExe`：客户端完整路径，自动找不到时手动填
 - `port`：DevTools 端口，冲突时可改（例如 9333）
 - `match`：注入页面的地址关键字，一般不用改
+- `uiMode`：脚本面板的显示方式
+  - `lite`（默认）：保留面板，但去掉 `backdrop-filter` 实时模糊和速度曲线——打开面板不会再拖慢播放
+  - `full`：脚本原样，面板最好看但更吃性能
+  - `off`：完全隐藏面板（加速功能照常工作）
 
 ## 日志与排错
 

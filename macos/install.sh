@@ -47,6 +47,7 @@ pick_python() {
 }
 
 PYTHON="${PYTHON:-$(pick_python || true)}"
+UI_MODE="${BILI_UI_MODE:-full}"   # full | lite | off
 
 say() { printf '%s\n' "$*"; }
 fail() { say ""; say "❌ $*"; exit 1; }
@@ -80,6 +81,7 @@ sed -e "s|__DIR__|$DIR|g" \
     -e "s|__BILI_APP__|$BILI_APP|g" \
     -e "s|__PORT__|$PORT|g" \
     -e "s|__PYTHON__|$PYTHON|g" \
+    -e "s|__UI_MODE__|$UI_MODE|g" \
     "$ROOT_DIR/macos/launcher.sh.template" > "$APP/Contents/MacOS/launcher"
 chmod 755 "$APP/Contents/MacOS/launcher"
 sed -e "s|__NAME__|哔哩哔哩 加速|g" \
@@ -102,6 +104,7 @@ sed -e "s|__PYTHON__|$PYTHON|g" \
     -e "s|__PORT__|$PORT|g" \
     -e "s|__LOG__|$DIR/injector.log|g" \
     -e "s|__ERRLOG__|$DIR/injector.err.log|g" \
+    -e "s|__UI_MODE__|$UI_MODE|g" \
     "$ROOT_DIR/macos/com.local.bili-injector.plist.template" > "$AGENT"
 
 UID_NUM="$(id -u)"

@@ -166,6 +166,15 @@ xcode-select --install
 不要手动刷新客户端的播放页——被刷新后客户端不会自动续播（不注入脚本也一样）。
 重启客户端即可恢复。其他实测结论见 [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)。
 
+**打开脚本面板后视频变卡？**
+面板原本带实时高斯模糊和速度曲线，低配机器会掉帧。Windows 安装后默认使用
+`uiMode: "lite"`（保留面板、去掉模糊和曲线），可在 `config.json` 里改成：
+
+- `"uiMode": "full"`：脚本原样（最好看，最吃性能）
+- `"uiMode": "off"`：完全不显示面板（加速照常工作）
+
+macOS 想换模式：重装时带上环境变量，例如 `BILI_UI_MODE=lite ./macos/install.sh`。
+
 ## 其他平台有没有办法
 
 - **Android**：官方 App 无法注入。可用 root + LSPosed 模块（如 BiliRoaming，
