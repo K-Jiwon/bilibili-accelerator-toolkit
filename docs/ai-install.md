@@ -20,7 +20,9 @@ unzip -o /tmp/bili-mac.zip -d /Applications
 open "/Applications/哔哩哔哩 加速 安装器.app"
 ```
 
-如果被 Gatekeeper 拦住：右键 App → 打开 → 再点"打开"。
+如果 macOS 拦住（弹窗："未打开「哔哩哔哩 加速 安装器」… Apple 无法验证…"）：
+让用户依次点：弹窗里的「完成」（不要点「移到废纸篓」）→ 系统设置 → 隐私与安全性 →
+安全性 →「仍要打开」→ 输入开机密码 → 「打开」。只需一次。
 
 纯命令行等价做法：
 
