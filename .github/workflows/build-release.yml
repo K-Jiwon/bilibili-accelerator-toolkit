@@ -1,4 +1,4 @@
-name: build-windows
+name: build-release
 
 on:
   push:
@@ -39,11 +39,11 @@ jobs:
           }
           if ($failed) { exit 1 }
 
-      - name: Compile injector.py
+      - name: Compile Python sources
         shell: pwsh
-        run: python -m py_compile injector.py
+        run: python -m py_compile injector.py tools/add_bom.py
 
-  build:
+  build-windows:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,16 +55,44 @@ jobs:
       - name: Build release bundle
         run: bash tools/build_windows_release.sh
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: BiliAccelerator-Windows
-          path: dist/BiliAccelerator-Windows.zip
-
-      - name: Attach to release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
+          path: |
             dist/BiliAccelerator-Windows.zip
             dist/BiliAccelerator-Windows.zip.sha256
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build installer app
+        run: bash macos/installer/build_installer.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BiliAccelerator-macOS-Installer
+          path: |
+            dist/BiliAccelerator-macOS-Installer.zip
+            dist/BiliAccelerator-macOS-Installer.zip.sha256
+
+  release:
+    if: github.event_name == 'release'
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: List files to publish
+        run: find dist -type f | sort
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/BiliAccelerator-Windows/BiliAccelerator-Windows.zip
+            dist/BiliAccelerator-Windows/BiliAccelerator-Windows.zip.sha256
+            dist/BiliAccelerator-macOS-Installer/BiliAccelerator-macOS-Installer.zip
+            dist/BiliAccelerator-macOS-Installer/BiliAccelerator-macOS-Installer.zip.sha256

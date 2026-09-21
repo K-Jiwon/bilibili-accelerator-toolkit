@@ -1,8 +1,23 @@
 #!/bin/zsh
-# Install the BiliAccelerator launcher and injector on macOS.
+# 哔哩哔哩 加速 · macOS 安装脚本
+#
+# 可以用两种方式运行：
+#   1) 在仓库里：  ./macos/install.sh
+#   2) 在安装器 App 里：由 App 自动调用（文件会放在 App 的 Resources 里）
+#
+# 安装内容全部在用户目录，不需要管理员密码：
+#   ~/.bili-accelerator/                程序 + 日志
+#   ~/Applications/哔哩哔哩 加速.app     启动器
+#   ~/Library/LaunchAgents/…            开机自启的注入服务
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/../injector.py" ]; then
+  ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+  ROOT_DIR="$SCRIPT_DIR"
+fi
+
 DIR="$HOME/.bili-accelerator"
 APPS_DIR="$HOME/Applications"
 APP="$APPS_DIR/哔哩哔哩 加速.app"
@@ -10,32 +25,32 @@ AGENT="$HOME/Library/LaunchAgents/com.local.bili-injector.plist"
 BILI_APP="${BILI_APP:-/Applications/哔哩哔哩.app}"
 PORT="${BILI_PORT:-9223}"
 PYTHON="${PYTHON:-$(command -v python3 || true)}"
-WEBSOCKET_CLIENT_VERSION="1.9.2"
+WS_VERSION="1.9.2"
 
-if [ ! -d "$BILI_APP" ]; then
-  echo "找不到客户端：$BILI_APP"
-  echo "如果装在别的位置，可以这样指定："
-  echo "  BILI_APP=/Applications/你的客户端.app ./macos/install.sh"
-  exit 1
-fi
+say() { printf '%s\n' "$*"; }
+fail() { say ""; say "❌ $*"; exit 1; }
 
-if [ -z "$PYTHON" ]; then
-  echo "需要 python3（macOS 可以用 xcode-select --install 安装命令行工具）"
-  exit 1
-fi
+say "=================================="
+say "  哔哩哔哩 加速 · 安装 (macOS)"
+say "=================================="
+say ""
 
+[ -d "$BILI_APP" ] || fail "没找到客户端：$BILI_APP （请把客户端放在 /Applications 下）"
+[ -n "$PYTHON" ] || fail "缺少 python3。请在终端运行：xcode-select --install"
+
+say "① 复制程序文件…"
 mkdir -p "$DIR" "$APPS_DIR" "$HOME/Library/LaunchAgents"
-cp "$REPO_DIR/injector.py" "$DIR/injector.py"
-cp "$REPO_DIR/userscript/bilibili-accelerator.user.js" "$DIR/bilibili-accelerator.user.js"
+cp "$ROOT_DIR/injector.py" "$DIR/injector.py"
+cp "$ROOT_DIR/userscript/bilibili-accelerator.user.js" "$DIR/bilibili-accelerator.user.js"
 chmod 755 "$DIR/injector.py"
 
-echo "准备运行环境（首次需要联网安装 websocket-client）..."
+say "② 准备运行环境（第一次需要联网，约 10 秒）…"
 if [ ! -d "$DIR/venv" ]; then
   "$PYTHON" -m venv "$DIR/venv"
 fi
-"$DIR/venv/bin/pip" install --quiet --upgrade pip \
-  "websocket-client==${WEBSOCKET_CLIENT_VERSION}"
+"$DIR/venv/bin/pip" install --quiet --upgrade pip "websocket-client==${WS_VERSION}"
 
+say "③ 创建启动器…"
 if [ -e "$APP" ]; then
   mv "$APP" "$APP.bak.$(date +%s)"
 fi
@@ -43,30 +58,38 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 sed -e "s|__DIR__|$DIR|g" \
     -e "s|__BILI_APP__|$BILI_APP|g" \
     -e "s|__PORT__|$PORT|g" \
-    "$REPO_DIR/macos/launcher.sh.template" > "$APP/Contents/MacOS/launcher"
+    "$ROOT_DIR/macos/launcher.sh.template" > "$APP/Contents/MacOS/launcher"
 chmod 755 "$APP/Contents/MacOS/launcher"
-sed -e "s|__NAME__|哔哩哔哩 加速|g" "$REPO_DIR/macos/Info.plist.template" > "$APP/Contents/Info.plist"
-if [ -f "$REPO_DIR/assets/icon.icns" ]; then
-  cp "$REPO_DIR/assets/icon.icns" "$APP/Contents/Resources/appicon.icns"
+sed -e "s|__NAME__|哔哩哔哩 加速|g" \
+    "$ROOT_DIR/macos/Info.plist.template" > "$APP/Contents/Info.plist"
+if [ -f "$ROOT_DIR/assets/icon.icns" ]; then
+  cp "$ROOT_DIR/assets/icon.icns" "$APP/Contents/Resources/appicon.icns"
 fi
 /usr/bin/codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 
+say "④ 注册后台服务…"
 sed -e "s|__PYTHON__|$DIR/venv/bin/python|g" \
     -e "s|__INJECTOR__|$DIR/injector.py|g" \
     -e "s|__SCRIPT__|$DIR/bilibili-accelerator.user.js|g" \
     -e "s|__PORT__|$PORT|g" \
     -e "s|__LOG__|$DIR/injector.log|g" \
     -e "s|__ERRLOG__|$DIR/injector.err.log|g" \
-    "$REPO_DIR/macos/com.local.bili-injector.plist.template" > "$AGENT"
+    "$ROOT_DIR/macos/com.local.bili-injector.plist.template" > "$AGENT"
 
 UID_NUM="$(id -u)"
 launchctl bootout "gui/$UID_NUM/com.local.bili-injector" 2>/dev/null || true
-launchctl bootstrap "gui/$UID_NUM" "$AGENT"
-launchctl enable "gui/$UID_NUM/com.local.bili-injector"
+sleep 1
+launchctl bootstrap "gui/$UID_NUM" "$AGENT" 2>/dev/null || true
+launchctl enable "gui/$UID_NUM/com.local.bili-injector" 2>/dev/null || true
 launchctl kickstart -k "gui/$UID_NUM/com.local.bili-injector" >/dev/null 2>&1 || true
 
-echo ""
-echo "安装完成！"
-echo "· 启动器： $APP（建议拖到 Dock）"
-echo "· 注入日志：$DIR/injector.log"
-echo "· 以后从「哔哩哔哩 加速」启动客户端即可"
+say ""
+say "✅ 安装完成！接下来这样做："
+say ""
+say "   1) 把「哔哩哔哩 加速」图标拖到 Dock（图钉）上"
+say "      $APP"
+say "   2) 以后都用它启动客户端（第一次会自动重启一次客户端）"
+say "   3) 客户端里出现小闪电 ⚡ 就说明成功了"
+say ""
+say "   日志：$DIR/injector.log"
+say "   卸载：双击「卸载」或运行 ./macos/uninstall.sh"

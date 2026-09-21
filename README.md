@@ -10,6 +10,27 @@
 
 支持 macOS 和 Windows。**不修改客户端文件**，客户端升级不受影响。
 
+## 最简单的方式（推荐）
+
+**macOS**
+
+1. 下载 [BiliAccelerator-macOS-Installer.zip](../../releases/latest/download/BiliAccelerator-macOS-Installer.zip)，解压
+2. 双击「哔哩哔哩 加速 安装器」→ 点「**安装**」
+3. 以后从「**哔哩哔哩 加速**」图标启动客户端；客户端里出现 ⚡ 就成功了
+
+不想用了：再双击安装器 → 点「**卸载**」即可。
+
+**Windows**
+
+1. 下载 [BiliAccelerator-Windows.zip](../../releases/latest/download/BiliAccelerator-Windows.zip)，解压
+2. 双击「**install.cmd**」
+3. 以后从「**哔哩哔哩 加速**」图标启动客户端
+
+不想用了：双击「**uninstall.cmd**」。
+
+> 让 AI 帮你装（省 token）：[docs/ai-install.md](docs/ai-install.md)
+> 一步一步、最通俗的说明：[docs/simple-guide.md](docs/simple-guide.md)
+
 ## 支持的平台
 
 | 平台 | 支持情况 | 说明 |
@@ -41,13 +62,19 @@ Chrome DevTools 协议（CDP）连进这些页面，把脚本注入到每个页�
 
 ### macOS
 
+**方式 A（推荐，图形界面）**：从 Releases 下载
+`BiliAccelerator-macOS-Installer.zip`，解压后双击「哔哩哔哩 加速 安装器」，
+点「安装」；卸载就在同一个窗口点「卸载」。
+
+**方式 B（命令行）**：
+
 ```bash
 git clone https://github.com/<你的用户名>/bilibili-accelerator-toolkit.git
 cd bilibili-accelerator-toolkit
 ./macos/install.sh
 ```
 
-安装脚本会：
+安装脚本做的事（全部在用户目录，不需要管理员密码）：
 
 1. 把注入器安装到 `~/.bili-accelerator/`（含独立 venv，依赖 `websocket-client`）
 2. 在 `~/Applications/` 生成「哔哩哔哩 加速.app」启动器
@@ -61,6 +88,8 @@ cd bilibili-accelerator-toolkit
 ./macos/uninstall.sh
 ```
 
+（也可以直接双击仓库里的 `macos/install.command` / `macos/uninstall.command`。）
+
 ### Windows
 
 从 [Releases](../../releases) 下载 `BiliAccelerator-Windows.zip`（自带 Python 运行时，
@@ -71,6 +100,13 @@ cd bilibili-accelerator-toolkit
 ```bash
 bash tools/build_windows_release.sh
 # 产物: dist/BiliAccelerator-Windows.zip
+```
+
+macOS 安装器 App 也可以自己构建：
+
+```bash
+bash macos/installer/build_installer.sh
+# 产物: dist/BiliAccelerator-macOS-Installer.zip
 ```
 
 ## 目录结构
