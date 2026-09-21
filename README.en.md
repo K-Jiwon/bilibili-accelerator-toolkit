@@ -78,5 +78,6 @@ More detail: [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (Chinese).
 ## Credits and license
 
 - Upstream userscript: [realzza/bilibili-accelerator](https://github.com/realzza/bilibili-accelerator) (MIT, redistributed unmodified)
-- `websocket-client` (Apache-2.0) is the only runtime dependency
+- `wsclient.py` is a tiny WebSocket client implemented with the Python standard
+  library only, so the installer never runs pip and works offline
 - This project: MIT — see [LICENSE](LICENSE) and [NOTICE](NOTICE)

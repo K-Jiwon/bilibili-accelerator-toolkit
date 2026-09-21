@@ -8,12 +8,7 @@ This project includes third-party components:
    Notes:   The userscript is redistributed unmodified. All rights belong to
             its original author. See the header of the file for details.
 
-2. websocket-client (runtime dependency, installed via pip / bundled in the
-   Windows release)
-   Source:  https://github.com/websocket-client/websocket-client
-   License: Apache License 2.0
-
-3. Python (bundled in the Windows release)
+2. Python (bundled in the Windows release)
    Source:  https://www.python.org/
    License: PSF License Agreement
 

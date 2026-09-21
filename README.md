@@ -76,7 +76,7 @@ cd bilibili-accelerator-toolkit
 
 安装脚本做的事（全部在用户目录，不需要管理员密码）：
 
-1. 把注入器安装到 `~/.bili-accelerator/`（含独立 venv，依赖 `websocket-client`）
+1. 把注入器安装到 `~/.bili-accelerator/`（只用 Python 标准库，不需要 pip、不需要联网）
 2. 在 `/Applications`（Finder 里的「应用程序」）生成「哔哩哔哩 加速.app」启动器；
    如果该目录没有写权限，会自动退回 `~/Applications/`
 3. 注册开机自启的 LaunchAgent（`com.local.bili-injector`）
@@ -155,12 +155,11 @@ macOS：修改 `~/Applications/哔哩哔哩 加速.app/Contents/MacOS/launcher` 
 通过加速启动器启动后，调试端口在整个客户端运行期间都开着（只监听 `127.0.0.1`，
 退出客户端即关闭）。不用加速启动器就不会带这个端口。
 
-**安装时报 `websocket-client==1.9.2` 找不到？**
-说明这台 Mac 的 `python3` 是 3.9（该版本要求 3.10+）。安装脚本会自动回退到兼容的
-1.9.0 并继续安装；如果仍失败，先装新版 Python 再重试：
+**提示 "需要 python3"？**
+说明这台 Mac 还没装命令行工具。运行一次下面的命令即可（会弹出安装窗口）：
 
 ```bash
-brew install python@3.12
+xcode-select --install
 ```
 
 **播放页黑屏 / 面板消失？**
@@ -185,7 +184,7 @@ brew install python@3.12
 
 - [realzza/bilibili-accelerator](https://github.com/realzza/bilibili-accelerator)：核心加速脚本（MIT）
 - [mitmproxy](https://mitmproxy.org/)：早期网络层方案的验证工具
-- [websocket-client](https://github.com/websocket-client/websocket-client)：CDP 通信依赖
+- `wsclient.py`：自己实现的极简 WebSocket 客户端（只用 Python 标准库，所以安装时不用 pip、不用联网）
 
 ## License
 

@@ -14,7 +14,36 @@ import json
 import time
 import urllib.request
 
-import websocket
+def _load_websocket():
+    """Return (WebSocketTimeoutException, create_connection).
+
+    Prefers the bundled zero-dependency implementation. The file is loaded by
+    path as a fallback because the embeddable Windows Python uses a ._pth file
+    and does not necessarily put the script directory on sys.path.
+    """
+    try:
+        from wsclient import WebSocketTimeoutException, create_connection
+
+        return WebSocketTimeoutException, create_connection
+    except ImportError:
+        pass
+
+    import importlib.util
+    import os
+
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wsclient.py")
+    if os.path.exists(path):
+        spec = importlib.util.spec_from_file_location("wsclient", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.WebSocketTimeoutException, module.create_connection
+
+    import websocket  # type: ignore  # last resort: websocket-client
+
+    return websocket.WebSocketTimeoutException, websocket.create_connection
+
+
+WebSocketTimeoutException, create_connection = _load_websocket()
 
 DEFAULT_MATCH = "bilipc.bilibili.com"
 
@@ -53,7 +82,7 @@ class Injector:
                     f"(Browser={version.get('Browser')!r}); "
                     "change the 'port' setting in config.json"
                 )
-        self.ws = websocket.create_connection(version["webSocketDebuggerUrl"], timeout=20)
+        self.ws = create_connection(version["webSocketDebuggerUrl"], timeout=20)
         self.send("Target.setDiscoverTargets", {"discover": True})
 
     def matches(self, url: str) -> bool:
@@ -184,7 +213,7 @@ class Injector:
             try:
                 self.ws.settimeout(10)
                 message = json.loads(self.ws.recv())
-            except websocket.WebSocketTimeoutException:
+            except WebSocketTimeoutException:
                 self.reconcile()
                 continue
             except Exception as error:

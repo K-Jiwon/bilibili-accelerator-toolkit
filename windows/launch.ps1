@@ -34,9 +34,36 @@ if ($Config -and $Config.match) { $Match = $Config.match }
 $Exe = $null
 if ($Config -and $Config.clientExe) { $Exe = $Config.clientExe }
 
+function Find-BiliClient {
+    $candidates = @()
+    $candidates += Join-Path $env:LOCALAPPDATA "Programs\bilibili\哔哩哔哩.exe"
+    $candidates += Join-Path $env:LOCALAPPDATA "Programs\哔哩哔哩\哔哩哔哩.exe"
+    $candidates += Join-Path $env:LOCALAPPDATA "bilibili\哔哩哔哩.exe"
+    if (${env:ProgramFiles}) { $candidates += Join-Path ${env:ProgramFiles} "bilibili\哔哩哔哩.exe" }
+    if (${env:ProgramFiles(x86)}) { $candidates += Join-Path ${env:ProgramFiles(x86)} "bilibili\哔哩哔哩.exe" }
+    foreach ($path in $candidates) {
+        if ($path -and (Test-Path $path)) { return $path }
+    }
+    return $null
+}
+
+# config.json may be empty if auto-detection failed during install; try again
+# here so the launcher can still work.
+if (-not $Exe -or -not (Test-Path $Exe)) {
+    $detected = Find-BiliClient
+    if ($detected) {
+        $Exe = $detected
+        Write-Log "auto-detected client: $Exe"
+        try {
+            $Config.clientExe = $Exe
+            $Config | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
+        } catch { }
+    }
+}
+
 if (-not $Exe -or -not (Test-Path $Exe)) {
     Write-Log "client exe not found (config: $Exe)"
-    Show-Message "没有找到哔哩哔哩客户端。`n`n请编辑安装目录下的 config.json，把 clientExe 改成客户端完整路径，例如：`nC:\Users\你\AppData\Local\Programs\bilibili\哔哩哔哩.exe" "哔哩哔哩 加速"
+    Show-Message "没有找到哔哩哔哩客户端。`n`n请双击桌面的「哔哩哔哩 加速 诊断」生成诊断文件，`n或编辑安装目录下的 config.json，把 clientExe 改成完整路径，例如：`nC:\Users\你\AppData\Local\Programs\bilibili\哔哩哔哩.exe" "哔哩哔哩 加速"
     exit 1
 }
 

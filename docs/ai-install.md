@@ -73,7 +73,7 @@ powershell -ExecutionPolicy Bypass -File "$env:TEMP\bili\BiliAccelerator-Windows
 | 提示端口被占用 | 编辑 `config.json` 的 `port`（Windows），换成例如 9333 |
 | 要日志 | macOS `~/.bili-accelerator/injector.log`；Windows `%LOCALAPPDATA%\BiliAccelerator\injector.log` |
 | 说装的是商店版 | 微软商店 UWP 版不支持，必须用官网电脑版 |
-| 报错 `No matching distribution found for websocket-client==1.9.2` | 这台 Mac 的 python3 是 3.9（1.9.2 需要 3.10+）。新版本安装器会自动回退到 1.9.0；若仍失败，让用户执行 `brew install python@3.12` 后重跑安装器 |
+| macOS 报"需要 python3" | 让用户运行 `xcode-select --install`，装完再重跑安装器（注入器只用标准库，不需要 pip 和联网） |
 
 ## 省 token 约定
 

@@ -90,29 +90,50 @@ $config | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
 
 $shell = New-Object -ComObject WScript.Shell
 $icon = Join-Path $Dest "bilibili.ico"
-$target = Join-Path $Dest "launch.vbs"
+$launchPs1 = Join-Path $Dest "launch.ps1"
+$startPs1 = Join-Path $Dest "start-injector.ps1"
+$diagnosePs1 = Join-Path $Dest "diagnose.ps1"
 
-function New-Shortcut([string]$Path, [string]$Arguments) {
+# Shortcuts call PowerShell directly (no Windows Script Host / .vbs, which is
+# disabled on many managed machines).
+function New-Shortcut([string]$Path, [string]$Arguments, [string]$Description) {
     $lnk = $shell.CreateShortcut($Path)
-    $lnk.TargetPath = "wscript.exe"
+    $lnk.TargetPath = "powershell.exe"
     $lnk.Arguments = $Arguments
     $lnk.WorkingDirectory = $Dest
     if (Test-Path $icon) { $lnk.IconLocation = $icon }
-    $lnk.Description = "哔哩哔哩 加速"
+    $lnk.Description = $Description
     $lnk.Save()
 }
 
-$launchArg = "`"$target`""
-New-Shortcut (Join-Path ([Environment]::GetFolderPath("Desktop")) "哔哩哔哩 加速.lnk") $launchArg
-New-Shortcut (Join-Path ([Environment]::GetFolderPath("Programs")) "哔哩哔哩 加速.lnk") $launchArg
+$launchArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchPs1`""
+$startArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$startPs1`""
+$diagnoseArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$diagnosePs1`""
 
-$injectorVbs = Join-Path $Dest "injector.vbs"
-New-Shortcut (Join-Path ([Environment]::GetFolderPath("Startup")) "BiliAccelerator Injector.lnk") "`"$injectorVbs`""
+$desktop = [Environment]::GetFolderPath("Desktop")
+$startMenu = [Environment]::GetFolderPath("Programs")
+$startup = [Environment]::GetFolderPath("Startup")
+
+New-Shortcut (Join-Path $desktop "哔哩哔哩 加速.lnk") $launchArgs "哔哩哔哩 加速（用这个启动客户端）"
+New-Shortcut (Join-Path $startMenu "哔哩哔哩 加速.lnk") $launchArgs "哔哩哔哩 加速（用这个启动客户端）"
+New-Shortcut (Join-Path $desktop "哔哩哔哩 加速 诊断.lnk") $diagnoseArgs "收集诊断信息"
+New-Shortcut (Join-Path $startup "BiliAccelerator Injector.lnk") $startArgs "开机自动启动注入器"
 
 Write-Host ""
-Write-Host "安装完成！" -ForegroundColor Green
-Write-Host "· 桌面和开始菜单已创建「哔哩哔哩 加速」快捷方式"
-Write-Host "· 客户端路径: $Exe"
-Write-Host "· 以后从这个快捷方式启动（首次会自动重启一次客户端）"
-Write-Host "· 注入日志: $Dest\injector.log"
-Write-Host "· 卸载: 运行 uninstall.ps1"
+Write-Host "==================== 安装完成 ====================" -ForegroundColor Green
+Write-Host ""
+Write-Host "已经在【桌面】创建了这两个快捷方式：" -ForegroundColor Yellow
+Write-Host "  1. 哔哩哔哩 加速          ← 以后用这个启动客户端"
+Write-Host "  2. 哔哩哔哩 加速 诊断      ← 出问题时双击它，生成诊断文件"
+Write-Host ""
+Write-Host "还创建了：开始菜单快捷方式 + 开机自动启动注入器"
+Write-Host "客户端路径：$Exe"
+Write-Host ""
+Write-Host "下一步（照做就行）：" -ForegroundColor Yellow
+Write-Host "  1) 双击桌面的「哔哩哔哩 加速」（首次会自动重启一次客户端）"
+Write-Host "  2) 等客户端打开，右下角出现小闪电 ⚡ 就成功了"
+Write-Host "  3) 如果 30 秒后还没有 ⚡：双击「哔哩哔哩 加速 诊断」，"
+Write-Host "     桌面上会生成「哔哩哔哩加速-诊断结果.txt」，把它发给开发者"
+Write-Host ""
+Write-Host "日志目录：$Dest" -ForegroundColor DarkGray
+Write-Host "卸载：双击 uninstall.cmd" -ForegroundColor DarkGray
