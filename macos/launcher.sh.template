@@ -14,7 +14,8 @@ LOG="$DIR/injector.log"
 mkdir -p "$DIR"
 
 if ! pgrep -f "$INJ" >/dev/null 2>&1; then
-  nohup "$PY" "$INJ" --port "$PORT" --script "$SCRIPT" --logfile "$LOG" >> "$LOG" 2>&1 &
+  nohup "$PY" "$INJ" --port "$PORT" --script "$SCRIPT" --logfile "$LOG" \
+    >> "$DIR/injector.stdout.log" 2>&1 &
 fi
 
 port_up() {
@@ -36,9 +37,17 @@ fi
 
 open -a "$BILI_APP" --args --remote-debugging-port="$PORT"
 
+launched=0
 for _ in {1..30}; do
-  port_up && break
+  if port_up; then
+    launched=1
+    break
+  fi
   sleep 0.5
 done
 
-osascript -e 'display notification "加速脚本已注入" with title "哔哩哔哩"' >/dev/null 2>&1 &
+if [ "$launched" = "1" ]; then
+  osascript -e 'display notification "加速已启用" with title "哔哩哔哩"' >/dev/null 2>&1 &
+else
+  osascript -e 'display notification "未能开启调试端口，请查看 injector.log" with title "哔哩哔哩"' >/dev/null 2>&1 &
+fi

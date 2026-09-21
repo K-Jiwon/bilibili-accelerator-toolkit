@@ -1,4 +1,4 @@
-$ErrorActionPreference = "SilentlyContinue"
+﻿$ErrorActionPreference = "SilentlyContinue"
 
 $Dest = Join-Path $env:LOCALAPPDATA "BiliAccelerator"
 

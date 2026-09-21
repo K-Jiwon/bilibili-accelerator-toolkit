@@ -10,6 +10,7 @@ AGENT="$HOME/Library/LaunchAgents/com.local.bili-injector.plist"
 BILI_APP="${BILI_APP:-/Applications/哔哩哔哩.app}"
 PORT="${BILI_PORT:-9223}"
 PYTHON="${PYTHON:-$(command -v python3 || true)}"
+WEBSOCKET_CLIENT_VERSION="1.9.2"
 
 if [ ! -d "$BILI_APP" ]; then
   echo "找不到客户端：$BILI_APP"
@@ -32,7 +33,8 @@ echo "准备运行环境（首次需要联网安装 websocket-client）..."
 if [ ! -d "$DIR/venv" ]; then
   "$PYTHON" -m venv "$DIR/venv"
 fi
-"$DIR/venv/bin/pip" install --quiet --upgrade pip websocket-client
+"$DIR/venv/bin/pip" install --quiet --upgrade pip \
+  "websocket-client==${WEBSOCKET_CLIENT_VERSION}"
 
 if [ -e "$APP" ]; then
   mv "$APP" "$APP.bak.$(date +%s)"

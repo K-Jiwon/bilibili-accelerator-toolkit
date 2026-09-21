@@ -78,7 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 ## 说明
 
 - 注入通过 Chromium 的 DevTools 协议完成，不修改客户端文件，客户端升级不受影响
-- 只监听本机 `127.0.0.1`，且只在你用加速快捷方式启动时开启调试端口
+- 调试端口只监听本机 `127.0.0.1`；它在你用加速快捷方式启动的**整个客户端生命周期内**都处于开启状态，退出客户端后才关闭
 - 脚本源文件（`injector.py`、`bilibili-accelerator.user.js`）都打包在目录里，可自行查看
 
 ## 可能的拦截提示

@@ -12,6 +12,37 @@ permissions:
   contents: write
 
 jobs:
+  powershell-parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Parse PowerShell scripts (catches ANSI/GBK decoding failures)
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $_.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Host "FAIL $($_.FullName)"
+              $errors | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            } else {
+              Write-Host "OK   $($_.Name)"
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Compile injector.py
+        shell: pwsh
+        run: python -m py_compile injector.py
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -34,4 +65,6 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/BiliAccelerator-Windows.zip
+          files: |
+            dist/BiliAccelerator-Windows.zip
+            dist/BiliAccelerator-Windows.zip.sha256

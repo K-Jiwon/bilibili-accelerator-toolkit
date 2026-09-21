@@ -1,6 +1,5 @@
 @echo off
-chcp 65001 >nul
-echo 正在安装哔哩哔哩加速...
+echo Installing BiliAccelerator for the Bilibili desktop client...
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
 echo.
 pause

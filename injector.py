@@ -25,18 +25,34 @@ def http_json(port: int, path: str, timeout: float = 3.0):
 
 
 class Injector:
-    def __init__(self, port: int, script: str, log, match_hosts: list[str]) -> None:
+    def __init__(
+        self,
+        port: int,
+        script: str,
+        log,
+        match_hosts: list[str],
+        check_ua: bool = True,
+    ) -> None:
         self.port = port
         self.script = script
         self.log = log
         self.match_hosts = match_hosts
         self.mid = 0
-        self.attached_targets: set[str] = set()
         self.ready_sessions: set[str] = set()
         self.known_targets: dict[str, str] = {}
         self.session_targets: dict[str, str] = {}
+        self.pending_attaches: dict[int, str] = {}
+        self.attach_attempts: dict[str, float] = {}
 
         version = http_json(port, "/json/version")
+        if check_ua:
+            user_agent = f"{version.get('User-Agent', '')} {version.get('Browser', '')}".lower()
+            if "bilibili" not in user_agent:
+                raise RuntimeError(
+                    f"port {port} is not the Bilibili client "
+                    f"(Browser={version.get('Browser')!r}); "
+                    "change the 'port' setting in config.json"
+                )
         self.ws = websocket.create_connection(version["webSocketDebuggerUrl"], timeout=20)
         self.send("Target.setDiscoverTargets", {"discover": True})
 
@@ -45,7 +61,7 @@ class Injector:
 
     # ---- low level -------------------------------------------------------
     def send(self, method: str, params: dict | None = None, session_id: str | None = None,
-             timeout: float | None = None):
+             timeout: float | None = None) -> int:
         # Fire-and-forget: replies and events are processed by the main loop.
         # Waiting for replies here re-enters the message loop and can swallow
         # the outer command's response, which used to add ~10s of latency.
@@ -54,6 +70,7 @@ class Injector:
         if session_id:
             message["sessionId"] = session_id
         self.ws.send(json.dumps(message))
+        return self.mid
 
     # ---- message handling ------------------------------------------------
     def handle(self, message: dict) -> None:
@@ -71,8 +88,11 @@ class Injector:
         elif method == "Target.attachedToTarget":
             info = params.get("targetInfo") or {}
             sid = params.get("sessionId")
+            target_id = info.get("targetId", "")
             if sid:
-                self.session_targets[sid] = info.get("targetId", "")
+                self.session_targets[sid] = target_id
+            if target_id:
+                self.attach_attempts.pop(target_id, None)
             if sid and self.matches(info.get("url", "")):
                 self.setup_session(sid)
         elif method == "Runtime.executionContextCreated":
@@ -88,24 +108,46 @@ class Injector:
             if sid:
                 self.ready_sessions.discard(sid)
             if target_id:
-                # Allow this target to be attached again later (reload,
-                # reconnect, new player window reusing the same target).
-                self.attached_targets.discard(target_id)
                 self.log(f"detached target {target_id[:8]}")
         elif method == "Target.targetDestroyed":
             target_id = params.get("targetId")
             if target_id:
                 self.known_targets.pop(target_id, None)
-                self.attached_targets.discard(target_id)
+                self.attach_attempts.pop(target_id, None)
+                for sid, mapped in list(self.session_targets.items()):
+                    if mapped == target_id:
+                        self.session_targets.pop(sid, None)
+                        self.ready_sessions.discard(sid)
+
+    def target_has_session(self, target_id: str) -> bool:
+        return any(mapped == target_id for mapped in self.session_targets.values())
 
     def attach_if_needed(self, target_id: str | None, url: str) -> None:
-        if not target_id or target_id in self.attached_targets:
+        if not target_id or not self.matches(url):
             return
-        if not self.matches(url):
+        # Attachment state is derived from live sessions, so a failed
+        # attachToTarget (error response, dying target, another debugger)
+        # gets retried by reconcile() instead of blacklisting the target
+        # until the injector restarts.
+        if self.target_has_session(target_id):
             return
-        self.attached_targets.add(target_id)
+        now = time.time()
+        if now - self.attach_attempts.get(target_id, 0.0) < 15:
+            return
+        self.attach_attempts[target_id] = now
         self.log(f"attach target {url[:90]}")
-        self.send("Target.attachToTarget", {"targetId": target_id, "flatten": True})
+        message_id = self.send("Target.attachToTarget", {"targetId": target_id, "flatten": True})
+        self.pending_attaches[message_id] = target_id
+
+    def handle_response(self, message: dict) -> None:
+        message_id = message.get("id")
+        target_id = self.pending_attaches.pop(message_id, None)
+        error = message.get("error")
+        if not error:
+            return
+        detail = error.get("message", str(error)) if isinstance(error, dict) else str(error)
+        where = f" target={target_id[:8]}" if target_id else ""
+        self.log(f"command failed:{where} {detail}")
 
     def reconcile(self) -> None:
         """Re-attach known targets that lost their session (periodic safety net)."""
@@ -149,6 +191,10 @@ class Injector:
                 self.log(f"devtools connection closed: {error}")
                 return
             if "id" in message:
+                try:
+                    self.handle_response(message)
+                except Exception as error:
+                    self.log(f"response handling error: {error}")
                 continue
             try:
                 self.handle(message)
@@ -166,6 +212,11 @@ def main() -> int:
         help="comma separated URL substrings that identify client pages",
     )
     parser.add_argument("--logfile", default="", help="append log lines to this file")
+    parser.add_argument(
+        "--skip-ua-check",
+        action="store_true",
+        help="connect even if the devtools endpoint does not look like the Bilibili client",
+    )
     args = parser.parse_args()
 
     with open(args.script, encoding="utf-8") as handle:
@@ -189,7 +240,13 @@ def main() -> int:
     last_error_at = 0.0
     while True:
         try:
-            injector = Injector(args.port, script, log, match_hosts)
+            injector = Injector(
+                args.port,
+                script,
+                log,
+                match_hosts,
+                check_ua=not args.skip_ua_check,
+            )
             injector.run()
             last_error = None
         except Exception as error:

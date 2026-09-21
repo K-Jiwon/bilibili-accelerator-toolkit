@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
 $Source = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -51,22 +51,42 @@ function Find-BiliClient {
     return $null
 }
 
-$Exe = Find-BiliClient
+$ConfigPath = Join-Path $Dest "config.json"
+$Existing = $null
+if (Test-Path $ConfigPath) {
+    try {
+        $Existing = Get-Content -Path $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch { }
+}
+
+$Exe = $null
+if ($Existing -and $Existing.clientExe -and (Test-Path $Existing.clientExe)) { $Exe = $Existing.clientExe }
+$Port = 9223
+if ($Existing -and $Existing.port) { $Port = [int]$Existing.port }
+$Match = "bilipc.bilibili.com"
+if ($Existing -and $Existing.match) { $Match = $Existing.match }
+
+if (-not $Exe) {
+    $Exe = Find-BiliClient
+}
 if (-not $Exe) {
     Write-Host "没有自动找到哔哩哔哩客户端。" -ForegroundColor Yellow
-    $Exe = Read-Host "请粘贴客户端 exe 的完整路径（例如 C:\Users\你\AppData\Local\Programs\bilibili\哔哩哔哩.exe）"
-    if (-not (Test-Path $Exe)) {
-        Write-Host "路径无效，安装后会生成 config.json，你可以手动修改 clientExe。" -ForegroundColor Yellow
+    $answer = Read-Host "请粘贴客户端 exe 的完整路径（例如 C:\Users\你\AppData\Local\Programs\bilibili\哔哩哔哩.exe）"
+    if (Test-Path $answer) {
+        $Exe = $answer
+    } else {
+        Write-Host "路径无效，安装后请手动修改 config.json 里的 clientExe。" -ForegroundColor Yellow
         $Exe = ""
     }
 }
 
+# Keep whatever the user configured before; only fill in what is missing.
 $config = [ordered]@{
     clientExe = $Exe
-    port = 9223
-    match = "bilipc.bilibili.com"
+    port = $Port
+    match = $Match
 }
-$config | ConvertTo-Json | Set-Content -Path (Join-Path $Dest "config.json") -Encoding UTF8
+$config | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
 
 $shell = New-Object -ComObject WScript.Shell
 $icon = Join-Path $Dest "bilibili.ico"
