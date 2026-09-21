@@ -29,8 +29,13 @@ sha256_of() {
   fi
 }
 
-echo "==> generating icons"
-python3 "$REPO_ROOT/tools/make_icon.py" "$REPO_ROOT/assets"
+echo "==> checking icons"
+for icon in icon.ico icon.icns icon.png; do
+  if [ ! -f "$REPO_ROOT/assets/$icon" ]; then
+    echo "ERROR: assets/$icon is missing (run tools/make_icons_from_image.sh)" >&2
+    exit 1
+  fi
+done
 
 echo "==> downloading Python ${PY_VERSION} embeddable runtime"
 curl -fsSL -o "$WORK/python-embed.zip" \
