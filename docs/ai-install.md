@@ -74,6 +74,7 @@ powershell -ExecutionPolicy Bypass -File "$env:TEMP\bili\BiliAccelerator-Windows
 | 要日志 | macOS `~/.bili-accelerator/injector.log`；Windows `%LOCALAPPDATA%\BiliAccelerator\injector.log` |
 | 说装的是商店版 | 微软商店 UWP 版不支持，必须用官网电脑版 |
 | 用户说"打开面板就卡" | 让他在 `config.json` 把 `uiMode` 改成 `lite` 或 `off`（Win）/ 用 `BILI_UI_MODE=lite` 重装（macOS） |
+| 报错 `libcrypto-3.dll ... 正由另一进程使用` | 旧注入器还在运行。新版 `install.ps1` 会自动停掉它；若仍失败：先 `uninstall.cmd`，再 `install.cmd`，或重启电脑 |
 | macOS 报"需要 python3" | 让用户运行 `xcode-select --install`，装完再重跑安装器（注入器只用标准库，不需要 pip 和联网） |
 
 ## 省 token 约定

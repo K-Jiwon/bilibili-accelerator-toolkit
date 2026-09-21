@@ -9,9 +9,52 @@ if (-not (Test-Path $Dest)) {
     New-Item -ItemType Directory -Path $Dest | Out-Null
 }
 
+# A previously installed injector runs from $Dest (pythonw.exe), which locks
+# its own DLLs (e.g. libcrypto-3.dll). Stop those processes before copying, or
+# the copy fails with "file is being used by another process".
+function Stop-RunningInjectors {
+    $count = 0
+    Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" -ErrorAction SilentlyContinue | ForEach-Object {
+        $cmd = $_.CommandLine
+        if ($cmd -and ($cmd -match "injector\.py" -or $cmd -match "launcher\.py" -or $cmd -match [regex]::Escape($Dest))) {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            $count++
+        }
+    }
+    return $count
+}
+
+$stopped = Stop-RunningInjectors
+if ($stopped -gt 0) {
+    Write-Host "   已停止 $stopped 个正在运行的注入器进程（避免文件被占用）"
+    Start-Sleep -Milliseconds 800
+}
+
 if ((Resolve-Path $Source).Path -ne (Resolve-Path $Dest).Path) {
-    Get-ChildItem -Path $Source -Force | ForEach-Object {
-        Copy-Item -Path $_.FullName -Destination $Dest -Recurse -Force
+    $copied = $false
+    for ($attempt = 1; $attempt -le 3 -and -not $copied; $attempt++) {
+        try {
+            Get-ChildItem -Path $Source -Force | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination $Dest -Recurse -Force -ErrorAction Stop
+            }
+            $copied = $true
+        } catch {
+            Write-Host ("   第 $attempt 次复制失败：" + $_.Exception.Message) -ForegroundColor Yellow
+            Stop-RunningInjectors | Out-Null
+            Start-Sleep -Seconds 2
+        }
+    }
+    if (-not $copied) {
+        Write-Host ""
+        Write-Host "复制文件失败：还有程序占用安装目录里的文件。" -ForegroundColor Red
+        Write-Host "请这样做：" -ForegroundColor Yellow
+        Write-Host "  1) 先退出哔哩哔哩客户端"
+        Write-Host "  2) 双击 uninstall.cmd（会清掉旧文件和后台进程）"
+        Write-Host "  3) 再双击 install.cmd"
+        Write-Host ""
+        Write-Host "仍然失败的话，重启电脑后再安装一次。" -ForegroundColor Yellow
+        Read-Host "按回车键退出"
+        exit 1
     }
 }
 

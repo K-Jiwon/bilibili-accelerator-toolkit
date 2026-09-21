@@ -12,10 +12,24 @@ foreach ($item in $shortcuts) {
 }
 
 try {
-    Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-        Where-Object { $_.CommandLine -like "*injector.py*" } |
+    Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" |
+        Where-Object {
+            $_.CommandLine -and (
+                $_.CommandLine -like "*injector.py*" -or
+                $_.CommandLine -like "*launcher.py*" -or
+                $_.CommandLine -like "*$Dest*"
+            )
+        } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 } catch { }
 
-if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
+Start-Sleep -Milliseconds 800
+if (Test-Path $Dest) {
+    Remove-Item $Dest -Recurse -Force -ErrorAction SilentlyContinue
+}
+if (Test-Path $Dest) {
+    Write-Host "有文件删不掉（可能还在被占用）。请重启电脑后再运行一次 uninstall.cmd。" -ForegroundColor Yellow
+} else {
+    Write-Host "已删除程序目录: $Dest"
+}
 Write-Host "已卸载哔哩哔哩加速。"
