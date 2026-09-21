@@ -19,8 +19,15 @@ else
 fi
 
 DIR="$HOME/.bili-accelerator"
-APPS_DIR="$HOME/Applications"
+# 优先装到系统级 /Applications（Finder 侧边栏的「应用程序」就在这儿），
+# 没有写权限时退回用户级 ~/Applications。
+if [ -w /Applications ]; then
+  APPS_DIR="/Applications"
+else
+  APPS_DIR="$HOME/Applications"
+fi
 APP="$APPS_DIR/哔哩哔哩 加速.app"
+OTHER_APP="$HOME/Applications/哔哩哔哩 加速.app"
 AGENT="$HOME/Library/LaunchAgents/com.local.bili-injector.plist"
 BILI_APP="${BILI_APP:-/Applications/哔哩哔哩.app}"
 PORT="${BILI_PORT:-9223}"
@@ -52,7 +59,7 @@ fi
 
 say "③ 创建启动器…"
 if [ -e "$APP" ]; then
-  mv "$APP" "$APP.bak.$(date +%s)"
+  mv "$APP" "$DIR/old-launcher.$(date +%s).app"
 fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 sed -e "s|__DIR__|$DIR|g" \
@@ -66,6 +73,12 @@ if [ -f "$ROOT_DIR/assets/icon.icns" ]; then
   cp "$ROOT_DIR/assets/icon.icns" "$APP/Contents/Resources/appicon.icns"
 fi
 /usr/bin/codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+
+# 避免两个「哔哩哔哩 加速.app」同时存在造成混乱
+if [ "$APPS_DIR" = "/Applications" ] && [ -f "$OTHER_APP/Contents/MacOS/launcher" ]; then
+  rm -rf "$OTHER_APP"
+  say "   （已清理用户级的旧副本）"
+fi
 
 say "④ 注册后台服务…"
 sed -e "s|__PYTHON__|$DIR/venv/bin/python|g" \

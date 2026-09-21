@@ -35,7 +35,8 @@ zsh ~/bili-accelerator-src/macos/install.sh
 launchctl print "gui/$(id -u)/com.local.bili-injector" | grep -E "state|pid"
 ```
 
-然后告诉用户：**以后从 `~/Applications/哔哩哔哩 加速.app` 启动客户端**，
+然后告诉用户：**以后从 `/Applications/哔哩哔哩 加速.app`（Finder 的"应用程序"文件夹）
+启动客户端**；如果安装脚本提示没有写权限，则启动器在 `~/Applications/哔哩哔哩 加速.app`。
 客户端里出现小闪电 ⚡ 就成功了。
 
 ## Windows（3 步）
@@ -60,6 +61,7 @@ powershell -ExecutionPolicy Bypass -File "$env:TEMP\bili\BiliAccelerator-Windows
 ## 卸载
 
 - macOS：`zsh ~/bili-accelerator-src/macos/uninstall.sh`，或双击安装器 App 里的"卸载"
+  （启动器可能装在 `/Applications` 或 `~/Applications`，卸载脚本两个位置都会清理）
 - Windows：`powershell -ExecutionPolicy Bypass -File "$env:TEMP\bili\BiliAccelerator-Windows\uninstall.ps1"`
 
 ## 出错时怎么判断（不要瞎猜）

@@ -16,7 +16,7 @@
 
 1. 下载 [BiliAccelerator-macOS-Installer.zip](../../releases/latest/download/BiliAccelerator-macOS-Installer.zip)，解压
 2. 双击「哔哩哔哩 加速 安装器」→ 点「**安装**」
-3. 以后从「**哔哩哔哩 加速**」图标启动客户端；客户端里出现 ⚡ 就成功了
+3. 以后从「**哔哩哔哩 加速**」图标启动客户端（在「应用程序」文件夹里，也可用 `⌘ + 空格` 搜"哔哩哔哩 加速"）；客户端里出现 ⚡ 就成功了
 
 不想用了：再双击安装器 → 点「**卸载**」即可。
 
@@ -77,7 +77,8 @@ cd bilibili-accelerator-toolkit
 安装脚本做的事（全部在用户目录，不需要管理员密码）：
 
 1. 把注入器安装到 `~/.bili-accelerator/`（含独立 venv，依赖 `websocket-client`）
-2. 在 `~/Applications/` 生成「哔哩哔哩 加速.app」启动器
+2. 在 `/Applications`（Finder 里的「应用程序」）生成「哔哩哔哩 加速.app」启动器；
+   如果该目录没有写权限，会自动退回 `~/Applications/`
 3. 注册开机自启的 LaunchAgent（`com.local.bili-injector`）
 
 然后从「哔哩哔哩 加速」启动客户端即可（首次会自动重启一次客户端以带上调试端口）。
