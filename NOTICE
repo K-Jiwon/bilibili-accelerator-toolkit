@@ -1,0 +1,20 @@
+This project includes third-party components:
+
+1. Bilibili Accelerator (userscript/bilibili-accelerator.user.js)
+   Source:  https://github.com/realzza/bilibili-accelerator
+           https://greasyfork.org/scripts/582026
+   Author:  realzza
+   License: MIT
+   Notes:   The userscript is redistributed unmodified. All rights belong to
+            its original author. See the header of the file for details.
+
+2. websocket-client (runtime dependency, installed via pip / bundled in the
+   Windows release)
+   Source:  https://github.com/websocket-client/websocket-client
+   License: Apache License 2.0
+
+3. Python (bundled in the Windows release)
+   Source:  https://www.python.org/
+   License: PSF License Agreement
+
+BiliAccelerator Toolkit itself is licensed under the MIT License (see LICENSE).
