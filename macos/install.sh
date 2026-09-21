@@ -31,8 +31,24 @@ OTHER_APP="$HOME/Applications/哔哩哔哩 加速.app"
 AGENT="$HOME/Library/LaunchAgents/com.local.bili-injector.plist"
 BILI_APP="${BILI_APP:-/Applications/哔哩哔哩.app}"
 PORT="${BILI_PORT:-9223}"
-PYTHON="${PYTHON:-$(command -v python3 || true)}"
-WS_VERSION="1.9.2"
+WS_VERSION="1.9.2"           # 需要 Python >= 3.10
+WS_VERSION_FALLBACK="1.9.0"  # 需要 Python >= 3.9
+
+# 优先使用较新的 python3（Homebrew），因为它能装上固定版本的依赖；
+# 只有系统自带的 3.9 时也能工作，会自动回退到兼容版本。
+pick_python() {
+  local candidate
+  for candidate in /opt/homebrew/bin/python3 /usr/local/bin/python3 "$(command -v python3 2>/dev/null)"; do
+    [ -n "$candidate" ] && [ -x "$candidate" ] || continue
+    if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+PYTHON="${PYTHON:-$(pick_python || true)}"
 
 say() { printf '%s\n' "$*"; }
 fail() { say ""; say "❌ $*"; exit 1; }
@@ -51,11 +67,23 @@ cp "$ROOT_DIR/injector.py" "$DIR/injector.py"
 cp "$ROOT_DIR/userscript/bilibili-accelerator.user.js" "$DIR/bilibili-accelerator.user.js"
 chmod 755 "$DIR/injector.py"
 
-say "② 准备运行环境（第一次需要联网，约 10 秒）…"
+PY_VER="$("$PYTHON" -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])' 2>/dev/null || echo "unknown")"
+say "② 准备运行环境（Python $PY_VER，第一次需要联网，约 10 秒）…"
 if [ ! -d "$DIR/venv" ]; then
   "$PYTHON" -m venv "$DIR/venv"
 fi
-"$DIR/venv/bin/pip" install --quiet --upgrade pip "websocket-client==${WS_VERSION}"
+if ! "$DIR/venv/bin/pip" install --quiet --upgrade pip "websocket-client==${WS_VERSION}" \
+     >/dev/null 2>&1; then
+  say "   Python $PY_VER 装不了 ${WS_VERSION}（它需要 3.10+），自动改用 ${WS_VERSION_FALLBACK}…"
+  if ! "$DIR/venv/bin/pip" install --quiet --upgrade pip \
+       "websocket-client==${WS_VERSION_FALLBACK}" >/dev/null 2>&1; then
+    fail "依赖安装失败。可以试试安装新版 Python 后重跑：
+   brew install python@3.12"
+  fi
+fi
+if ! "$DIR/venv/bin/python" -c "import websocket" >/dev/null 2>&1; then
+  fail "websocket-client 没有安装成功，请把上面的错误信息发给开发者。"
+fi
 
 say "③ 创建启动器…"
 if [ -e "$APP" ]; then
