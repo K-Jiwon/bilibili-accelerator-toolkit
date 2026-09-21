@@ -68,7 +68,7 @@ try {
 Add-Line ""
 Add-Line "== 注入器进程 =="
 $found = $false
-Get-CimInstance Win32_Process -Filter "Name='python.exe'" | ForEach-Object {
+Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" | ForEach-Object {
     if ($_.CommandLine -match "injector") {
         $found = $true
         Add-Line ("PID " + $_.ProcessId + " : " + $_.CommandLine)
@@ -88,12 +88,12 @@ if (Test-Path $py) {
 Add-Line ""
 Add-Line "== injector.log 最后 40 行 =="
 $log = Join-Path $Base "injector.log"
-if (Test-Path $log) { Add-Line ((Get-Content $log -Tail 40) -join "`r`n") } else { Add-Line "（没有日志）" }
+if (Test-Path $log) { Add-Line ((Get-Content $log -Tail 40 -Encoding UTF8) -join "`r`n") } else { Add-Line "（没有日志）" }
 
 Add-Line ""
 Add-Line "== launcher.log 最后 40 行 =="
 $launcherLog = Join-Path $Base "launcher.log"
-if (Test-Path $launcherLog) { Add-Line ((Get-Content $launcherLog -Tail 40) -join "`r`n") } else { Add-Line "（没有日志）" }
+if (Test-Path $launcherLog) { Add-Line ((Get-Content $launcherLog -Tail 40 -Encoding UTF8) -join "`r`n") } else { Add-Line "（没有日志）" }
 
 $text = $lines -join "`r`n"
 $text | Set-Content -Path $out -Encoding UTF8

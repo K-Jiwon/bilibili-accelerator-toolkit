@@ -56,7 +56,22 @@ DEFAULT_MATCH = "bilipc.bilibili.com"
 #   off   -> hide the UI completely (rewriting still works)
 UI_PRELUDE = """(function () {
   var MODE = %s;
+  // The upstream badge hides itself in fullscreen / web-fullscreen mode until
+  // the pointer reaches a corner hotspot (":host(.ba-immersed){opacity:0}").
+  // Inside the desktop client that just looks like the panel is missing, so
+  // keep it visible and strip the class whenever the script re-adds it.
+  var BASE_CSS = ":host(.ba-immersed){opacity:1 !important;pointer-events:auto !important}.ba-toggle{opacity:1 !important;visibility:visible !important}";
   var LITE_CSS = ".ba-panel{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important}.ba-spd-canvas{display:none !important}";
+  var CSS = BASE_CSS + (MODE === "lite" ? LITE_CSS : "");
+  var observedHost = null;
+  var hostObserver = null;
+
+  function forceVisible(host) {
+    if (host.classList && host.classList.contains("ba-immersed")) {
+      host.classList.remove("ba-immersed");
+    }
+  }
+
   function apply() {
     var host = document.getElementById("bili-accelerator-button");
     if (!host) { return false; }
@@ -65,12 +80,21 @@ UI_PRELUDE = """(function () {
       host.setAttribute("aria-hidden", "true");
       return true;
     }
+    forceVisible(host);
+    if (observedHost !== host) {
+      observedHost = host;
+      try {
+        if (hostObserver) { hostObserver.disconnect(); }
+        hostObserver = new MutationObserver(function () { forceVisible(host); });
+        hostObserver.observe(host, { attributes: true, attributeFilter: ["class"] });
+      } catch (error) {}
+    }
     var root = host.shadowRoot;
     if (!root) { return false; }
-    if (!root.querySelector("style[data-bili-lite]")) {
+    if (!root.querySelector("style[data-bili-ui]")) {
       var style = document.createElement("style");
-      style.setAttribute("data-bili-lite", "1");
-      style.textContent = LITE_CSS;
+      style.setAttribute("data-bili-ui", "1");
+      style.textContent = CSS;
       root.appendChild(style);
     }
     return true;
@@ -78,11 +102,11 @@ UI_PRELUDE = """(function () {
   function start() {
     apply();
     try {
-      new MutationObserver(apply).observe(document.documentElement, { childList: true, subtree: true });
+      new MutationObserver(function () { apply(); }).observe(document.documentElement, { childList: true, subtree: true });
     } catch (error) {}
     var tries = 0;
     var timer = setInterval(function () {
-      if (apply() || ++tries > 40) { clearInterval(timer); }
+      if (apply() || ++tries > 200) { clearInterval(timer); }
     }, 250);
   }
   if (document.documentElement) { start(); } else { document.addEventListener("DOMContentLoaded", start); }
@@ -310,8 +334,9 @@ def main() -> int:
 
     with open(args.script, encoding="utf-8") as handle:
         script = handle.read()
-    if args.ui_mode != "full":
-        script = (UI_PRELUDE % json.dumps(args.ui_mode)) + "\n" + script
+    # Always inject the prelude: even in "full" mode it keeps the badge visible
+    # inside the client (see UI_PRELUDE).
+    script = (UI_PRELUDE % json.dumps(args.ui_mode)) + "\n" + script
 
     lock = acquire_singleton(args.port)
     if lock is None:
