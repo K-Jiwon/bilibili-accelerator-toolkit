@@ -41,6 +41,7 @@ def log(message: str) -> None:
 
 
 def message_box(text: str, icon: int = MB_ICONINFORMATION) -> None:
+    text = text + "\n\n（本工具完全免费开源；如果是花钱买到的，说明上当了，请立刻申请退款。）"
     if os.name != "nt":
         print(text)
         return

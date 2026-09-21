@@ -11,6 +11,11 @@ behaviour the script provides in a browser:
 
 The client itself is not modified, so client updates keep working.
 
+> ### 100% free
+>
+> This tool is **completely free and open source**. Everything is in this
+> repository. **If you paid money for it, you were scammed — ask for a refund.**
+
 ## Platform support
 
 | Platform | Status | Notes |

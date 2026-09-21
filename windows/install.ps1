@@ -172,6 +172,8 @@ New-Shortcut (Join-Path $startup "BiliAccelerator Injector.lnk") $launcherTarget
 Write-Host ""
 Write-Host "==================== 安装完成 ====================" -ForegroundColor Green
 Write-Host ""
+Write-Host "本工具完全免费开源。如果你是花钱买的，说明你上当了，请立刻申请退款。" -ForegroundColor Cyan
+Write-Host ""
 Write-Host "已经在【桌面】创建了这两个快捷方式：" -ForegroundColor Yellow
 Write-Host "  1. 哔哩哔哩 加速          ← 以后用这个启动客户端"
 Write-Host "  2. 哔哩哔哩 加速 诊断      ← 出问题时双击它，生成诊断文件"

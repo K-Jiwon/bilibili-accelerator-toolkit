@@ -10,6 +10,7 @@ function Add-Line($text) { [void]$lines.Add([string]$text) }
 Add-Line "哔哩哔哩 加速 · 诊断报告"
 Add-Line ("时间: " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss"))
 Add-Line ("安装目录: " + $Base)
+Add-Line "本工具完全免费开源（花钱买到的请立刻申请退款）"
 Add-Line ""
 
 Add-Line "== 系统 =="

@@ -57,7 +57,10 @@ TXT
 echo "==> compiling AppleScript app"
 osacompile -o "$APP" "$REPO_ROOT/macos/installer/installer.applescript"
 cp -R "$STAGE/"* "$APP/Contents/Resources/"
-cp "$REPO_ROOT/assets/icon.icns" "$APP/Contents/Resources/applet.icns"
+# The installer window uses its own artwork; the launcher keeps assets/icon.icns
+INSTALLER_ICON="$REPO_ROOT/assets/installer.icns"
+[ -f "$INSTALLER_ICON" ] || INSTALLER_ICON="$REPO_ROOT/assets/icon.icns"
+cp "$INSTALLER_ICON" "$APP/Contents/Resources/applet.icns"
 plutil -replace CFBundleName -string "哔哩哔哩 加速 安装器" "$APP/Contents/Info.plist" 2>/dev/null || true
 plutil -replace CFBundleDisplayName -string "哔哩哔哩 加速 安装器" "$APP/Contents/Info.plist" 2>/dev/null || true
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
