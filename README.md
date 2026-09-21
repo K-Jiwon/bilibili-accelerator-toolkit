@@ -114,6 +114,10 @@ macOS：修改 `~/Applications/哔哩哔哩 加速.app/Contents/MacOS/launcher` 
 **杀毒软件报警？**
 工具会向客户端进程注入脚本，属于预期行为；只在**本机**、只对哔哩哔哩客户端生效。
 
+**播放页黑屏 / 面板消失？**
+不要手动刷新客户端的播放页——被刷新后客户端不会自动续播（不注入脚本也一样）。
+重启客户端即可恢复。其他实测结论见 [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)。
+
 ## 其他平台有没有办法
 
 - **Android**：官方 App 无法注入。可用 root + LSPosed 模块（如 BiliRoaming，

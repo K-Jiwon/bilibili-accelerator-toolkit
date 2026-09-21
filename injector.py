@@ -33,6 +33,8 @@ class Injector:
         self.mid = 0
         self.attached_targets: set[str] = set()
         self.ready_sessions: set[str] = set()
+        self.known_targets: dict[str, str] = {}
+        self.session_targets: dict[str, str] = {}
 
         version = http_json(port, "/json/version")
         self.ws = websocket.create_connection(version["webSocketDebuggerUrl"], timeout=20)
@@ -63,18 +65,14 @@ class Injector:
             info = params.get("targetInfo") or {}
             target_id = info.get("targetId")
             url = info.get("url", "")
-            if (
-                target_id
-                and info.get("type") in ("page", "iframe")
-                and self.matches(url)
-                and target_id not in self.attached_targets
-            ):
-                self.attached_targets.add(target_id)
-                self.log(f"attach target {info.get('type')} {url[:90]}")
-                self.send("Target.attachToTarget", {"targetId": target_id, "flatten": True})
+            if target_id and info.get("type") in ("page", "iframe"):
+                self.known_targets[target_id] = url
+            self.attach_if_needed(target_id, url)
         elif method == "Target.attachedToTarget":
             info = params.get("targetInfo") or {}
             sid = params.get("sessionId")
+            if sid:
+                self.session_targets[sid] = info.get("targetId", "")
             if sid and self.matches(info.get("url", "")):
                 self.setup_session(sid)
         elif method == "Runtime.executionContextCreated":
@@ -86,8 +84,33 @@ class Injector:
             pass
         elif method == "Target.detachedFromTarget":
             sid = params.get("sessionId")
+            target_id = params.get("targetId") or self.session_targets.pop(sid, None)
             if sid:
                 self.ready_sessions.discard(sid)
+            if target_id:
+                # Allow this target to be attached again later (reload,
+                # reconnect, new player window reusing the same target).
+                self.attached_targets.discard(target_id)
+                self.log(f"detached target {target_id[:8]}")
+        elif method == "Target.targetDestroyed":
+            target_id = params.get("targetId")
+            if target_id:
+                self.known_targets.pop(target_id, None)
+                self.attached_targets.discard(target_id)
+
+    def attach_if_needed(self, target_id: str | None, url: str) -> None:
+        if not target_id or target_id in self.attached_targets:
+            return
+        if not self.matches(url):
+            return
+        self.attached_targets.add(target_id)
+        self.log(f"attach target {url[:90]}")
+        self.send("Target.attachToTarget", {"targetId": target_id, "flatten": True})
+
+    def reconcile(self) -> None:
+        """Re-attach known targets that lost their session (periodic safety net)."""
+        for target_id, url in list(self.known_targets.items()):
+            self.attach_if_needed(target_id, url)
 
     # ---- injection -------------------------------------------------------
     def setup_session(self, session_id: str) -> None:
@@ -120,6 +143,7 @@ class Injector:
                 self.ws.settimeout(10)
                 message = json.loads(self.ws.recv())
             except websocket.WebSocketTimeoutException:
+                self.reconcile()
                 continue
             except Exception as error:
                 self.log(f"devtools connection closed: {error}")
@@ -161,12 +185,22 @@ def main() -> int:
             except OSError:
                 pass
 
+    last_error = None
+    last_error_at = 0.0
     while True:
         try:
             injector = Injector(args.port, script, log, match_hosts)
             injector.run()
+            last_error = None
         except Exception as error:
-            log(f"waiting for client devtools: {error}")
+            message = str(error)
+            now = time.time()
+            # Log the first failure and then at most once every 5 minutes,
+            # so an idle machine does not grow the log by ~2 MB/day.
+            if message != last_error or now - last_error_at >= 300:
+                log(f"waiting for client devtools: {message}")
+                last_error = message
+                last_error_at = now
         time.sleep(2)
 
 

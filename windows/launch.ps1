@@ -40,29 +40,8 @@ if (-not $Exe -or -not (Test-Path $Exe)) {
     exit 1
 }
 
-$Python = Join-Path $Base "python\python.exe"
-$Injector = Join-Path $Base "injector.py"
-$UserScript = Join-Path $Base "bilibili-accelerator.user.js"
-$InjectorLog = Join-Path $Base "injector.log"
-
-$injectorRunning = $false
-try {
-    $procs = Get-CimInstance Win32_Process -Filter "Name='python.exe'"
-    foreach ($p in $procs) {
-        if ($p.CommandLine -and $p.CommandLine.Contains("injector.py")) { $injectorRunning = $true; break }
-    }
-} catch { }
-
-if (-not $injectorRunning) {
-    Write-Log "starting injector"
-    Start-Process -FilePath $Python -ArgumentList @(
-        "-X", "utf8", "`"$Injector`"",
-        "--port", "$Port",
-        "--script", "`"$UserScript`"",
-        "--match", "`"$Match`"",
-        "--logfile", "`"$InjectorLog`""
-    ) -WindowStyle Hidden
-}
+# Single source of truth for port / match / log path.
+& (Join-Path $Base "start-injector.ps1")
 
 function Test-Devtools {
     try {

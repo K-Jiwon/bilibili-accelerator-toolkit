@@ -19,8 +19,6 @@
   <true/>
   <key>KeepAlive</key>
   <true/>
-  <key>StandardOutPath</key>
-  <string>__LOG__</string>
   <key>StandardErrorPath</key>
   <string>__ERRLOG__</string>
 </dict>
